@@ -153,16 +153,18 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           cmake --install $env:BUILD_DIR --prefix dist
-          $runtime = Join-Path 'dist' 'nvjpeg2k_0.dll'
+          # nvjpeg2k_0.dll installs to dist\bin via CMAKE_INSTALL_BINDIR; search
+          # recursively so the check does not depend on the exact layout.
+          $runtime = Get-ChildItem dist -Filter 'nvjpeg2k_0.dll' -Recurse | Select-Object -First 1
           $extensionDir = Join-Path 'dist' 'extensions'
           $extensions = @(Get-ChildItem $extensionDir -Filter 'nvjpeg2k_ext*.dll' -ErrorAction SilentlyContinue)
-          if (-not (Test-Path $runtime)) {
-            throw "nvJPEG2000 runtime DLL was not installed into the package: $runtime"
+          if (-not $runtime) {
+            throw "nvJPEG2000 runtime DLL was not installed into the package"
           }
           if ($extensions.Count -eq 0) {
             throw "nvjpeg2k extension DLL was not installed into $extensionDir"
           }
-          Write-Host "Found nvJPEG2000 runtime: $runtime"
+          Write-Host "Found nvJPEG2000 runtime: $($runtime.FullName)"
           $extensions | ForEach-Object { Write-Host "Found nvjpeg2k extension: $($_.FullName)" }
 
       - name: Package
